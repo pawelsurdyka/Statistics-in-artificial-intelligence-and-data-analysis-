@@ -1,0 +1,134 @@
+---
+title: "Regresja liniowa - zadanie"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+## Zadanie 1
+
+Dane umieszczone są w zbiorze `Hitters` z pakietu `ISLR`. Przed użyciem
+należy usunąć wiersze zawierające wartości brakujące
+
+```{r}
+library(ISLR)
+Hitters <- na.omit(Hitters)
+head(Hitters)
+```
+
+Przy pomocy modelu liniowego przeanalizuj zależność zarobków zawodników
+(zmienna `Salary`) od wszystkich pozostałych zmiennych. Dla każdego
+predyktora stwierdź:
+
+-   czy na podstawie modelu można uznać, że jest on predyktorem
+    istotnym,
+
+-   jeśli jest istotny, to jaki jest jego wpływ na zarobki (zwróć uwagę
+    na różnicę w opisie wpływu predyktorów ilościowych i jakościowych).
+
+Przeanalizuj dopasowanie modelu do danych i stopień spełniania założeń
+modelu liniowego.
+
+## Rozwiązanie
+
+```{r multiRegressionAll}
+Hitters_full <- lm(Salary ~ ., data = Hitters)
+summary(Hitters_full)
+```
+
+```{r}
+coeffs <- summary(Hitters_full)$coefficients
+
+non_significant <- rownames(coeffs)[
+  which(coeffs[, "Pr(>|t|)"] > 0.05 | abs(coeffs[, "t value"]) < 2)
+][-1]
+
+print(non_significant)
+```
+
+### Istotność predyktorów
+
+Predyktory `HmRun`, `Runs`, `RBI`, `Years`, `CAtBat`, `CHits`, `CHmRun`,
+`CRuns`, `CRBI`, `LeagueN`, `Assists`, `Errors` i `NewLeagueN` nie mogą
+być uznane za istotne bo mają zbyt duże p-wartości (powyżej 0.05) lub
+mają za duży stosunek błędu standardowego do estymaty (t wartość \< 2).
+Przesłanki do uznania pozostałych za istotne są dość mocne. Zatem model
+wykazuje zależność zarobków zawodników od predyktorów `AtBat`, `Hits`,
+`Walks`, `CWalks`, `DivisionW` i `PutOuts`.
+
+### Wpływ predyktorów na zmienną odpowiedzi
+
+-   Predyktory o wpływie dodatnim: `Hits`, `Walks`i `PutOuts`
+
+-   Predyktory o wpływie ujemnym: `AtBat`, `CWalks`i `Division` z
+    wartością `W`,przy czym np. predykat `Division` przyjmujący wartość
+    `W` powoduje spadek wartości zarobków o około 116 dolarów.
+
+-   $R^2 = 0.54$ sugeruje, że niektóre predyktory mogą nie wnosić dużo
+    informacji , ale $F-statistic = 15.39$ i $p-value < 2.2e-16$
+    oznacza, że model jako całość jest istotny statystycznie –
+    przynajmniej jeden z predyktorów ma wpływ na zarobki zawodników.
+
+```{r}
+plot(Hitters_full)
+```
+
+## Zadanie 2
+
+Powtórz analizę z zadania 1 dla modelu skonstruowanego z pominięciem
+predyktorów, które w modelu pełnym okazały się nieistotne.
+
+## Rozwiązanie
+
+```{r}
+significant_vars <- setdiff(rownames(coeffs)[-1], non_significant)
+print(significant_vars)
+```
+
+```{r}
+model_reduced <- lm(
+  Salary ~ AtBat + Hits + Walks + CWalks + Division + PutOuts,
+  data = Hitters
+  )
+```
+
+```{r}
+summary(model_reduced)
+```
+
+```{r}
+coeffs <- summary(model_reduced)$coefficients
+
+non_significant <- rownames(coeffs)[
+  which(coeffs[, "Pr(>|t|)"] > 0.05 | abs(coeffs[, "t value"]) < 2)
+][-1]
+
+print(non_significant)
+```
+
+### Istotność predyktorów
+
+Predyktor `Walks` nie może być uznany za istotny bo ma zbyt dużą
+p-wartość (powyżej 0.05) i ma za duży stosunek błędu standardowego do
+estymaty (t wartość \< 2). Przesłanki do uznania pozostałych za istotne
+są dość mocne. Zatem model wykazuje zależność zarobków zawodników od
+predyktorów `AtBat`, `Hits`, `CWalks`, `DivisionW` i `PutOuts`.
+
+### Wpływ predyktorów na zmienną odpowiedzi
+
+-   Predyktory o wpływie dodatnim: `Hits`, `CWalks`i `PutOuts`
+
+-   Predyktory o wpływie ujemnym: `AtBat`i `Division` z wartością
+    `W`,przy czym np. predykat `Division` przyjmujący wartość `W`
+    powoduje spadek wartości zarobków o około 112 dolarów.
+
+-   $R^2 = 0.45$ sugeruje, że model wyjaśnia pewną część zmienności, ale
+    nie jest bardzo precyzyjny. $F-statistic = 35.26$ i
+    $p-value < 2.2e-16$ oznacza, że model jako całość jest istotny
+    statystycznie i przynajmniej jeden z predyktorów ma wpływ na zarobki
+    zawodników.
+
+```{r}
+plot(model_reduced)
+```
